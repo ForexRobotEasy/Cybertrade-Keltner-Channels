@@ -1,0 +1,99 @@
+
+// Program: Cybertrade Keltner Channels
+// Developer: Forex Robot Easy Team
+// Developer's Site: forexroboteasy.com
+
+// This program is designed to implement the Cybertrade Keltner Channels strategy
+
+// Include necessary libraries
+#include <Trade\Trade.mqh>
+#include <Indicators\Indicator.mqh>
+#include <Arrays\ArrayObj.mqh>
+
+// Define constants
+#define SYMBOL 'EURUSD'       // Symbol to trade
+#define LOTS   0.01           // Lot size for trading
+#define STOPLOSS 100          // Stop loss level in points
+#define TAKEPROFIT 200        // Take profit level in points
+
+// Define global variables
+CTrade trade;                // Trade object
+CArrayObj channels;          // Array object to store Keltner Channels data
+
+// Function to initialize the trading parameters
+void Init()
+{
+    trade.SetExpertMagicNumber(123456);  // Set expert magic number
+    trade.SetDeviationInPoints(10);      // Set deviation in points
+}
+
+// Function to calculate Keltner Channels
+void CalculateChannels()
+{
+    // Get Keltner Channels data
+    double upperBand[], middleBand[], lowerBand[];
+    iKeltnerChannels(NULL, 0, 20, 2.0, MODE_SMA, PRICE_CLOSE, upperBand, middleBand, lowerBand);
+
+    // Clear existing data from channels array
+    channels.Clear();
+
+    // Store Keltner Channels data in channels array
+    for (int i = 0; i < ArraySize(upperBand); i++)
+    {
+        CArrayObj channel;
+        channel.Add(upperBand[i]);
+        channel.Add(middleBand[i]);
+        channel.Add(lowerBand[i]);
+        channels.Add(channel);
+    }
+}
+
+// Function to check for trading opportunities
+void CheckOpportunities()
+{
+    // Get the current Keltner Channels data
+    CArrayObj currentChannel = channels[channels.Total()-1];
+
+    // Check if price crosses above the upper band
+    if (Ask > currentChannel[0])
+    {
+        // Open a buy trade
+        trade.Buy(LOTS, SYMBOL, Ask, Ask - STOPLOSS, Ask + TAKEPROFIT);
+    }
+    // Check if price crosses below the lower band
+    else if (Bid < currentChannel[2])
+    {
+        // Open a sell trade
+        trade.Sell(LOTS, SYMBOL, Bid, Bid + STOPLOSS, Bid - TAKEPROFIT);
+    }
+}
+
+// Function to close all open trades
+void CloseTrades()
+{
+    // Get the total number of open trades
+    int totalTrades = trade.PositionsTotal();
+
+    // Close all open trades
+    for (int i = 0; i < totalTrades; i++)
+    {
+        trade.PositionSelectByIndex(i);
+        trade.PositionClose();
+    }
+}
+
+// Entry point of the program
+void OnStart()
+{
+    // Initialize trading parameters
+    Init();
+
+    // Calculate Keltner Channels
+    CalculateChannels();
+
+    // Check for trading opportunities
+    CheckOpportunities();
+
+    // Close all open trades
+    CloseTrades();
+}
